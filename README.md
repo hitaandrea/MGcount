@@ -44,5 +44,3 @@ The work is funded by a Marie Curie early stage researcher fellowship. (European
 
 ## Licences
 MGcount itself is free software distributed under GPL.
-
-## Publication
