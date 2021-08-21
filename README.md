@@ -35,7 +35,7 @@ MGcount [args]
 ```
 
 ## Documentation
-MGcount user guide can be found inside the [docs](docs) subfolder or accessed through the following link:
+MGcount user guide can be found inside the docs subfolder or accessed through the following link:
 [Link to User Guide!](https://filedn.com/lTnUWxFTA93JTyX3Hvbdn2h/mgcount/UserGuide.html)
 
 
