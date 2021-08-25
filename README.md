@@ -25,13 +25,13 @@ Alternatively can download the latest release as a binary executable file [here]
 Save the program file to your Linux system and set the permissions to allow executing the file as program:
 
 ```shell
-chmod +x mgcount
+chmod +x MGcount
 ```
 
 Once the file is executable, run the tool by calling the file from the command line with the desired arguments.
 
 ```shell
-MGcount [args]
+./MGcount [args]
 ```
 
 ## Documentation
