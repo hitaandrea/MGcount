@@ -35,7 +35,7 @@ def read_assignation_loop(infiles, outdir, fcpath, tmppath, gtf_filename,
         
         if os.stat(tmppath + i + '_annot.gtf').st_size == 0:
             crounds = crounds.drop(crounds[crounds['annot'] == i].index).reset_index(drop=True)
-            
+    
     ## Hiearhihcal assignation parallelized by sample
     n_cores = min(mp.cpu_count(), n_cores)
     func_arh = partial(assign_rna_reads_hierarchically,
@@ -69,35 +69,27 @@ def assign_rna_reads_hierarchically(infile, outdir, fcpath, tmppath, crounds, en
         
         ## Call feature counts
         call_featurecounts(outdir, sn, fcpath, tmppath, end, strand, crounds.iloc[i])
-        
+    
         if not os.path.isfile(tmppath + sn + '_alignment.bam.featureCounts'):
             sys.exit('''Assignation failed. Please check your gtf or/and the 
                         arguments configuration provided for "feat", "attr" & "biotype''')
 
         ## Filter reads with at least 1 assigned alignment from input .bam file
-        os.system('grep "Assigned" ' + tmppath + sn +
-                  '_alignment.bam.featureCounts ' +
-                  '| cut -f 1 >> ' + tmppath + sn + '_fids.txt')
-        utils.remove_duplicated_lines(tmppath + sn + '_fids.txt',
-                                      tmppath + sn + '_fids2.txt')     
+        extract_assigned_readIds(tmppath + sn + '_alignment.bam.featureCounts',
+                                 tmppath + sn + '_fc_' + r,
+                                 tmppath + sn + '_fids.txt')
         filter_bamreads(tmppath + sn + '_alignment.bam',
                         tmppath + sn + '_alignment2.bam',
-                        tmppath + sn + '_fids2.txt')
+                        tmppath + sn + '_fids.txt') ##'_fids2.txt')
         copyfile(tmppath + sn + '_alignment2.bam',
                  tmppath + sn + '_alignment.bam')
+
+        ## Remove temporary files
         os.remove(tmppath + sn + '_alignment2.bam')
-        
-        ## Export alignment-feature assignation records
-        os.system('grep "Assigned" ' +
-                  tmppath + sn + '_alignment.bam.featureCounts >> ' +
-                  tmppath + sn + '_fc_' + r)
-        ##copyfile(tmppath + sn + '_alignment.bam.featureCounts',
-        ##         tmppath + sn + '_fc2_' + r)
         os.remove(tmppath + sn + '_alignment.bam.featureCounts')
     
     ## Remove temporary files
     os.remove(tmppath + sn + '_fids.txt')
-    os.remove(tmppath + sn + '_fids2.txt')
     
     return 0
 
@@ -210,3 +202,23 @@ def filter_bamreads(bam_infile, bam_outfile, reads_list_infile):
     outfile.close()
 
     
+def extract_assigned_readIds(fc_infile, fc_outfile, reads_list_outfile):
+    
+    ## Open file connections
+    infile = open(fc_infile, 'r')
+    outfile = open(fc_outfile, 'w')
+    rid_outfile = open(reads_list_outfile, 'w')
+
+    ## Initialize read_ids seen set
+    rids_seen = set()
+
+    ## Iterate over fc file            
+    for fc_line in infile.readlines():
+        aline = re.findall(r'Assigned', fc_line)
+        if aline:
+            outfile.write(fc_line)
+            rid = fc_line.split('\t')[0]
+            if rid not in rids_seen:
+                rid_outfile.write(rid+'\n')
+                rids_seen.add(rid)
+                
