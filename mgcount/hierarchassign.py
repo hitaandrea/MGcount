@@ -221,4 +221,9 @@ def extract_assigned_readIds(fc_infile, fc_outfile, reads_list_outfile):
             if rid not in rids_seen:
                 rid_outfile.write(rid+'\n')
                 rids_seen.add(rid)
-                
+
+    ## Exit
+    infile.close()
+    outfile.close()
+    rids_outfile.close()
+           
