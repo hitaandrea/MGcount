@@ -207,7 +207,7 @@ def extract_assigned_readIds(fc_infile, fc_outfile, reads_list_outfile):
     ## Open file connections
     infile = open(fc_infile, 'r')
     outfile = open(fc_outfile, 'w')
-    rid_outfile = open(reads_list_outfile, 'w')
+    rids_outfile = open(reads_list_outfile, 'w')
 
     ## Initialize read_ids seen set
     rids_seen = set()
@@ -219,7 +219,7 @@ def extract_assigned_readIds(fc_infile, fc_outfile, reads_list_outfile):
             outfile.write(fc_line)
             rid = fc_line.split('\t')[0]
             if rid not in rids_seen:
-                rid_outfile.write(rid+'\n')
+                rids_outfile.write(rid+'\n')
                 rids_seen.add(rid)
 
     ## Exit
