@@ -73,21 +73,21 @@ def main():
                         required = False,
                         default = '1')
     
-    parser.add_argument('-th_low',
+    parser.add_argument('--th_low',
                         type = float,
                         help = '''Low minimal threshold for feature-to-feature
                                    multi-mapping fraction\n''',
                         required = False,
                         default = 0.01)    
                         
-    parser.add_argument('-th_high',
+    parser.add_argument('--th_high',
                         type = float,
                         help = '''High minimal threshold for feature-to-feature
                                    multi-mapping fraction\n''',
                         required = False,
                         default = 0.75)    
     
-    parser.add_argument('-seed',
+    parser.add_argument('--seed',
                         type = float,
                         help = '''Optional fixed seed for random numbers generation 
                                   during communities detection\n''',
