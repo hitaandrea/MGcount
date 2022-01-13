@@ -19,7 +19,7 @@ from functools import partial
 from mgcount import utils
 
 def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores, 
-       n_sub, th_low, th_high, seed):
+       th_low, th_high, seed): 
 
     print("--------------------------------------------------------")
     print("Extracting multi-loci groups (2/3)")
@@ -72,8 +72,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
 
         ## Parallelize graph matrix generation by sample, asynchronously
         func_eam = partial(extract_adjacency_matrix,
-                           feat_list = feats[cround['attr']].tolist(),
-                           n_sub = n_sub)
+                           feat_list = feats[cround['attr']].tolist())
 
         with mp.Pool(processes = n_cores) as pool:
             mgm_list = pool.map(func_eam, fc_infiles)
@@ -131,10 +130,9 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
     return out_ml
 
 
-def extract_adjacency_matrix(fc_infile, feat_list, n_sub):
+def extract_adjacency_matrix(fc_infile, feat_list):
                          
     ## -------- Import feature counts output data
-    ## time2 = time.time()
     N = len(feat_list)
     M = np.zeros(shape = (len(feat_list),len(feat_list)), dtype = np.uint32)
     vdict = dict(zip(feat_list,range(0,len(feat_list))))
@@ -149,7 +147,6 @@ def extract_adjacency_matrix(fc_infile, feat_list, n_sub):
     connected_vertices = [int(vdict[vname]) for vname in currentRead[3].split(',')]
     i = 0; nreads = 0
     maxIter = sum(1 for line in open(fc_infile))-1
-    ## elapsed2setup = time.time() - time2
 
     ## -------- LOOP: Adjacency matrix generation
     while i <= maxIter:
@@ -175,8 +172,6 @@ def extract_adjacency_matrix(fc_infile, feat_list, n_sub):
           str(i-1) + ' alignments!')
     M_sparse = scipy.sparse.csc_matrix(M)
     M_sparse.dtype = np.int32
-    ## elapsed2loop = time.time() - time2
-    ## M2 = M
     return M_sparse
 
 

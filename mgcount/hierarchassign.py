@@ -65,15 +65,19 @@ def assign_rna_reads_hierarchically(infile, outdir, fcpath, tmppath, crounds, en
         
         ## Counting round
         r = crounds['r'][i]
-        print(r + ' feat. assignation round for: ' + sn)
+        print(r + ' assignation round for: ' + sn)
         
         ## Call feature counts
         call_featurecounts(outdir, sn, fcpath, tmppath, end, strand, crounds.iloc[i])
     
         if not os.path.isfile(tmppath + sn + '_alignment.bam.featureCounts'):
-            sys.exit('''Assignation failed. Please check your gtf or/and the 
-                        arguments configuration provided for "feat", "attr" & "biotype''')
-
+            sys.exit('READ ASSIGNATION FAILED. Please check that:\n'
+                     '1. The gtf contains the required non-empty fields as defined by the '
+                     'assignation arguments "feature", "feature_output" & "feature_biotype'
+                     '2. featureCounts is available on the path specified by '
+                     '--featureCounts_path argument (default: /user/bin/featureCounts)\n'
+                     '3. Input bam files are not empty or corrupted')
+            
         ## Filter reads with at least 1 assigned alignment from input .bam file
         extract_assigned_readIds(tmppath + sn + '_alignment.bam.featureCounts',
                                  tmppath + sn + '_fc_' + r,
@@ -83,7 +87,7 @@ def assign_rna_reads_hierarchically(infile, outdir, fcpath, tmppath, crounds, en
                         tmppath + sn + '_fids.txt') ##'_fids2.txt')
         copyfile(tmppath + sn + '_alignment2.bam',
                  tmppath + sn + '_alignment.bam')
-
+        
         ## Remove temporary files
         os.remove(tmppath + sn + '_alignment2.bam')
         os.remove(tmppath + sn + '_alignment.bam.featureCounts')
