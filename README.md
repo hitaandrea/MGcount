@@ -1,5 +1,10 @@
 # MGcount
-MGcount is a programm for counting whole-transcriptome RNA-seq reads. 
+MGcount is a program for counting whole-transcriptome RNA-seq reads
+from one or more input alignment files (.bam). It is specially designed to
+incorporate multi-mapping and multi-overlapping reads in the
+quantification using a flexible methodology that is compatible with any
+biotype. At the end of its execution, it produces a count matrix,
+compatible with any downstream analysis.
 
 ## Requirements
 MGcount deppends on FeatureCounts. Please download it from the following link: http://subread.sourceforge.net/
@@ -46,3 +51,5 @@ The work is funded by a Marie Curie early stage researcher fellowship. (European
 MGcount itself is free software distributed under GPL.
 
 ## Publication
+For more details, please, check our paper!
+https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-021-04544-3

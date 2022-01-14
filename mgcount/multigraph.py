@@ -19,7 +19,7 @@ from functools import partial
 from mgcount import utils
 
 def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores, 
-       n_sub, th_low, th_high, seed):
+       th_low, th_high, seed): 
 
     print("--------------------------------------------------------")
     print("Extracting multi-loci groups (2/3)")
@@ -37,6 +37,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
         feat_btypes = pd.merge(
             gtf[[cround['attr'], cround['btype']]][gtf['feature']==cround['feat']],
             btype_crounds, left_on = cround['btype'], right_on = 'biotype')
+            
         if cround['btype'] != 'biotype':
             feat_btypes.drop(['biotype'], axis='columns', inplace=True)
         
@@ -44,14 +45,17 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
         fc_infiles = [tmppath + sn + '_fc_' + cround['r'] for sn in samples]
 
         ## Get non-empty features (reduces mg matrix size and speeds-up computation)
-        counts = pd.concat([pd.read_table(tmppath+sn+'_counts_'+ cround['r']+'.csv',
-                                          sep = '\t', skiprows = 1, usecols = [6])
-                            for sn in samples], axis = 1).to_numpy()
-
+        counts = np.zeros(pd.read_table(tmppath+samples[0]+'_counts_'+ cround['r']+'.csv', 
+                           sep = '\t', skiprows = 1, usecols = [6]).shape[0])
+        for sn in samples:
+            counts = counts + pd.read_table(tmppath+sn+'_counts_'+ cround['r']+'.csv', 
+                                             sep = '\t', skiprows = 1, usecols = [6]).iloc[:,0].to_numpy() 
+        
         feats = pd.read_table(tmppath+samples[0]+'_counts_'+cround['r']+'.csv',
-                              sep = '\t', skiprows = 1, usecols = [0]).iloc[
-                                  np.where(counts.sum(axis=1)!= 0)[0].tolist(),0].reset_index(
-                                      drop = True)          
+                               sep = '\t', skiprows = 1, usecols = [0]).iloc[
+                                   np.where(counts!= 0)[0].tolist(),0].reset_index(
+                                       drop = True)    
+                                       
         ## Get gene biotypes
         feats = pd.DataFrame({cround['attr']:feats}).merge(
             feat_btypes[feat_btypes['assignation_round'] ==
@@ -68,11 +72,10 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
 
         ## Parallelize graph matrix generation by sample, asynchronously
         func_eam = partial(extract_adjacency_matrix,
-                           feat_list = feats[cround['attr']].tolist(),
-                           n_sub = n_sub)
+                           feat_list = feats[cround['attr']].tolist())
 
         with mp.Pool(processes = n_cores) as pool:
-             mgm_list = pool.map(func_eam, fc_infiles)
+            mgm_list = pool.map(func_eam, fc_infiles)
 
         ## Add matrices
         mgm = mgm_list[0]
@@ -127,58 +130,48 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
     return out_ml
 
 
-def extract_adjacency_matrix(fc_infile, feat_list, n_sub):
+def extract_adjacency_matrix(fc_infile, feat_list):
                          
     ## -------- Import feature counts output data
     N = len(feat_list)
     M = np.zeros(shape = (len(feat_list),len(feat_list)), dtype = np.uint32)
+    vdict = dict(zip(feat_list,range(0,len(feat_list))))
 
-    # Limit num of alignments per sample (optionally)
-    n_aln = sum(1 for l in open(fc_infile))
-    if n_sub != 0:
-        s_size = min(n_aln, n_sub)
-    else:
-        s_size = n_aln
-    fc_in = [pd.read_table(fc_infile, sep='\t', names=["read","flag","n.ass","gene"],
-                           skiprows = rnd.sample(range(1,n_aln), n_aln-s_size))]
-        
-    if fc_in[0].count()[0] == 0:
+    if os.stat(fc_infile).st_size == 0:
         M_sparse = scipy.sparse.csc_matrix(M)
         return M_sparse
-    
-    s = [fc_in[0]['gene'].str.split(",")]
-    fc = pd.DataFrame({'rname':np.repeat(fc_in[0]['read'], s[0].str.len()),
-                       'vname':list(it.chain.from_iterable(s[0]))}).reset_index(drop=True)
-    del fc_in; del s; ##gc.collect()
-    vcats = pd.CategoricalDtype(categories = feat_list)
 
-    fc['ridx'] = fc['rname'].astype('category').cat.codes
-    fc['vidx'] = fc['vname'].astype(vcats).cat.codes
-    fc = fc.sort_values('ridx').reset_index(drop = True)
+    os.system('sort -o ' + fc_infile + ' ' + fc_infile)
+    fc_in = open(fc_infile, 'r')
+    currentRead = fc_in.readline().rstrip().split('\t')
+    connected_vertices = [int(vdict[vname]) for vname in currentRead[3].split(',')]
+    i = 0; nreads = 0
+    maxIter = sum(1 for line in open(fc_infile))-1
 
-    i = 0
-    maxIter = fc.count()[0]
-    
-    ## -------- LOOP: Adjacency matrix generation 
-    while i < maxIter:
-        currentRead = fc.ridx[i]
-        connected_vertices = []
-        while fc.ridx[i] == currentRead:
-            connected_vertices.append(fc.vidx[i])
-            i = i+1
-            if i == maxIter:
-                break
-        edges = list(it.product(connected_vertices, repeat = 2))
-        for idx in edges:
-            M[idx] = M[idx] + 1
-            
+    ## -------- LOOP: Adjacency matrix generation
+    while i <= maxIter:
+        newRead = fc_in.readline().rstrip().split('\t')
+
+        if newRead[0] != currentRead[0]: 
+            edges = list(it.product(connected_vertices, repeat = 2))
+            connected_vertices = []
+            currentRead = newRead
+            for idx in edges:
+                M[idx] = M[idx] + 1
+            nreads+=1
+
+        if i == maxIter:
+            break
+        
+        for vname in newRead[3].split(','):
+            connected_vertices.append(int(vdict[vname]))
+        i+=1
+
     print('   --> Multi-mappers adjacency matrix successfully extracted from ' +
-          str(int(fc.ridx.max())) + ' reads and ' +
-          str(int(s_size)) + ' alignments!')
-
+          str(nreads) + ' reads and ' +
+          str(i-1) + ' alignments!')
     M_sparse = scipy.sparse.csc_matrix(M)
     M_sparse.dtype = np.int32
-
     return M_sparse
 
 
