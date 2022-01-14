@@ -56,6 +56,7 @@ define_bcats <- function(){
                                       "processed_transcript","3prime_overlapping_ncRNA",
                                       "bidirectional_promoter_lncRNA","nontranslating_CDS",
                                       "antisense_RNA")),    
+
     ## Ribosomal rna genes
     cbind("rRNA", "rRNA", "rRNA"),
 
@@ -80,8 +81,7 @@ define_bcats <- function(){
             "transcribed_processed_pseudogene",
             "transcribed_unitary_pseudogene",
             "translated_unprocessed_pseudogene",
-            "translated_processed_pseudogene",
-            "nontranslating_CDS")),
+            "translated_processed_pseudogene")),
 
     cbind("Hybrid", "TEC", "TEC"),
     cbind("Hybrid", "Hybrid", "Hybrid")))
@@ -89,6 +89,7 @@ define_bcats <- function(){
     names(bcats) <- c("biogroup", "biocat", "biotype")
     return(bcats)}
 
+bcats <- define_bcats()
 ##write.csv(bcats, file = paste0(db.dir,"bcats.csv"), row.names = FALSE)
 
 ## HUMAN ANNOTATIONS EXTRACTION
@@ -330,10 +331,10 @@ if(annotHuman){
     gtf.template@elementMetadata$source <- "DASHR"
     gtf.template@elementMetadata$type <- c("gene","transcript","exon","transcript","exon","transcript","exon")
 
-    trfgenes <-  unique(sub("-tRF3", "", sub("-tRF5", "", gff.trf@elementMetadata$ID)))
+    trfgenes <-  sub("-tRF3", "", sub("-tRF5", "", gff.trf@elementMetadata$ID))
     
     ## tRF .gtf generation loop
-    out <- mclapply(trfgenes, function(gi) {
+    out <- mclapply(unique(trfgenes), function(gi) {
 
         tt <- gff.trf[trfgenes %in% gi,]
 

@@ -25,17 +25,17 @@ Alternatively can download the latest release as a binary executable file [here]
 Save the program file to your Linux system and set the permissions to allow executing the file as program:
 
 ```shell
-chmod +x mgcount
+chmod +x MGcount
 ```
 
 Once the file is executable, run the tool by calling the file from the command line with the desired arguments.
 
 ```shell
-MGcount [args]
+./MGcount [args]
 ```
 
 ## Documentation
-MGcount user guide can be found inside the [docs](docs) subfolder or accessed through the following link:
+MGcount user guide can be found inside the docs subfolder or accessed through the following link:
 [Link to User Guide!](https://filedn.com/lTnUWxFTA93JTyX3Hvbdn2h/mgcount/UserGuide.html)
 
 
@@ -44,5 +44,3 @@ The work is funded by a Marie Curie early stage researcher fellowship. (European
 
 ## Licences
 MGcount itself is free software distributed under GPL.
-
-## Publication
