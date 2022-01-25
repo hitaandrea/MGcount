@@ -15,7 +15,7 @@ from functools import partial
 ## MGcount source code
 from mgcount import utils
 
-def read_assignation_loop(infiles, outdir, fcpath, tmppath, gtf_filename,
+def read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
                           crounds, btype_crounds, n_cores, end, strand):
 
     print("--------------------------------------------------------")
@@ -28,24 +28,23 @@ def read_assignation_loop(infiles, outdir, fcpath, tmppath, gtf_filename,
         btypes = btype_crounds['biotype'][btype_crounds['assignation_round']==i]
         tag = crounds['btype'][crounds['annot'] == i].iloc[0]
         pattern = re.compile('|'.join([tag+' "'+bt+ '"' for bt in btypes]))
-        gtf_subset = open(tmppath + i + '_annot.gtf','w')
+        gtf_subset = open(os.path.join(tmppath, i + '_annot.gtf'),'w')
         
         if len(btypes) != 0:
             gtf_subset.writelines([line for line in open(gtf_filename) if pattern.search(line)])
         
-        if os.stat(tmppath + i + '_annot.gtf').st_size == 0:
+        if os.stat(os.path.join(tmppath, i + '_annot.gtf')).st_size == 0:
             crounds = crounds.drop(crounds[crounds['annot'] == i].index).reset_index(drop=True)
     
     ## Hiearhihcal assignation parallelized by sample
     n_cores = min(mp.cpu_count(), n_cores)
     func_arh = partial(assign_rna_reads_hierarchically,
-                       outdir = outdir,
                        fcpath = fcpath,
                        tmppath = tmppath,
                        crounds = crounds,
                        end = end,
                        strand = strand)
-                       
+    
     with mp.Pool(processes = n_cores) as pool:
         result_list = pool.map(func_arh, infiles)
 
@@ -53,13 +52,13 @@ def read_assignation_loop(infiles, outdir, fcpath, tmppath, gtf_filename,
 
 
 
-def assign_rna_reads_hierarchically(infile, outdir, fcpath, tmppath, crounds, end, strand):
+def assign_rna_reads_hierarchically(infile, fcpath, tmppath, crounds, end, strand):
 
     ##sn = re.sub('/','_',re.sub('.bam','',infile))
     sn = re.sub('.bam','', utils.path_leaf(infile))
 
     ## Copy alignment file
-    copyfile(infile, tmppath + sn + '_alignment.bam')
+    copyfile(infile, os.path.join(tmppath, sn + '_alignment.bam'))
     
     for i in range(0, crounds.shape[0]):
         
@@ -68,9 +67,9 @@ def assign_rna_reads_hierarchically(infile, outdir, fcpath, tmppath, crounds, en
         print(r + ' assignation round for: ' + sn)
         
         ## Call feature counts
-        call_featurecounts(outdir, sn, fcpath, tmppath, end, strand, crounds.iloc[i])
+        call_featurecounts(sn, fcpath, tmppath, end, strand, crounds.iloc[i])
     
-        if not os.path.isfile(tmppath + sn + '_alignment.bam.featureCounts'):
+        if not os.path.isfile(os.path.join(tmppath, sn + '_alignment.bam.featureCounts')):
             sys.exit('READ ASSIGNATION FAILED. Please check that:\n'
                      '1. The gtf contains the required non-empty fields as defined by the '
                      'assignation arguments "feature", "feature_output" & "feature_biotype'
@@ -79,26 +78,26 @@ def assign_rna_reads_hierarchically(infile, outdir, fcpath, tmppath, crounds, en
                      '3. Input bam files are not empty or corrupted')
             
         ## Filter reads with at least 1 assigned alignment from input .bam file
-        extract_assigned_readIds(tmppath + sn + '_alignment.bam.featureCounts',
-                                 tmppath + sn + '_fc_' + r,
-                                 tmppath + sn + '_fids.txt')
-        filter_bamreads(tmppath + sn + '_alignment.bam',
-                        tmppath + sn + '_alignment2.bam',
-                        tmppath + sn + '_fids.txt') ##'_fids2.txt')
-        copyfile(tmppath + sn + '_alignment2.bam',
-                 tmppath + sn + '_alignment.bam')
+        extract_assigned_readIds(os.path.join(tmppath, sn + '_alignment.bam.featureCounts'),
+                                 os.path.join(tmppath, sn + '_fc_' + r),
+                                 os.path.join(tmppath, sn + '_fids.txt'))
+        filter_bamreads(os.path.join(tmppath, sn + '_alignment.bam'),
+                        os.path.join(tmppath, sn + '_alignment2.bam'),
+                        os.path.join(tmppath, sn + '_fids.txt')) ##'_fids2.txt')
+        copyfile(os.path.join(tmppath, sn + '_alignment2.bam'),
+                 os.path.join(tmppath, sn + '_alignment.bam'))
         
         ## Remove temporary files
-        os.remove(tmppath + sn + '_alignment2.bam')
-        os.remove(tmppath + sn + '_alignment.bam.featureCounts')
+        os.remove(os.path.join(tmppath, sn + '_alignment2.bam'))
+        os.remove(os.path.join(tmppath, sn + '_alignment.bam.featureCounts'))
     
     ## Remove temporary files
-    os.remove(tmppath + sn + '_fids.txt')
+    os.remove(os.path.join(tmppath, sn + '_fids.txt'))
     
     return 0
 
 
-def call_featurecounts(outdir, sn, fcpath, tmppath, end, strand, cround):
+def call_featurecounts(sn, fcpath, tmppath, end, strand, cround):
 
     ## Change temporarily the path 
     cwd = os.getcwd()
@@ -108,11 +107,12 @@ def call_featurecounts(outdir, sn, fcpath, tmppath, end, strand, cround):
     os.system(fcpath +
 
               ## ---- alignment input file
-              ' -o ' + tmppath +
-              sn + '_counts_' + cround['r']  + '.csv' +
+              ' -o ' + '"' +
+              os.path.join(tmppath, sn + '_counts_' + cround['r']  + '.csv') +  '" ' +
 
               ## ---- annotations
-              ' -a ' + tmppath + cround['annot'] + '_annot.gtf' +
+              ' -a ' + '"' +
+              os.path.join(tmppath, cround['annot'] + '_annot.gtf') +  '" ' +
                
               ' -F ' + 'GTF' +
               ' -t '+ cround['feat'] +
@@ -175,7 +175,7 @@ def call_featurecounts(outdir, sn, fcpath, tmppath, end, strand, cround):
               ## '--maxMOp '
               ## '--verbose '
               ## '-v '
-              tmppath + sn + '_alignment.bam ' +
+              '"' + os.path.join(tmppath, sn + '_alignment.bam') + '" ' +
               '>> /dev/null 2>&1')
         
     ## Re-change path to original

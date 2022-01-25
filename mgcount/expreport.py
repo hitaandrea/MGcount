@@ -9,7 +9,7 @@ import re as re
 from functools import partial
 from mgcount import utils
 
-def extract_count_matrix(infiles, outdir, tmppath, crounds, n_cores, ml=None):
+def extract_count_matrix(infiles, tmppath, crounds, n_cores, ml=None):
 
     print("--------------------------------------------------------")
     print("Computing expression matrix (3/3)")
@@ -22,7 +22,6 @@ def extract_count_matrix(infiles, outdir, tmppath, crounds, n_cores, ml=None):
     n_cores = min(mp.cpu_count(), n_cores)
     with mp.Pool(processes = n_cores) as pool:
         func_gc = partial(get_counts,
-                          outdir = outdir,
                           tmppath = tmppath,
                           crounds = crounds,
                           ml = ml)
@@ -35,7 +34,7 @@ def extract_count_matrix(infiles, outdir, tmppath, crounds, n_cores, ml=None):
     return counts
         
 
-def get_counts(sn, outdir, tmppath, crounds, ml):
+def get_counts(sn, tmppath, crounds, ml):
 
     print(sn)
 
@@ -46,8 +45,9 @@ def get_counts(sn, outdir, tmppath, crounds, ml):
         cround = crounds.iloc[i]
 
         ## Import fractionated counts
-        df = pd.read_table(tmppath + sn + '_counts_' + cround['r']  + '.csv',
-                   sep = '\t', skiprows = 1, usecols = [0,6], index_col = 0)
+        df = pd.read_table(
+            os.path.join(tmppath, sn + '_counts_' + cround['r']  + '.csv'),
+            sep = '\t', skiprows = 1, usecols = [0,6], index_col = 0)
         df.columns = ['counts']
 
         ## If small non-coding RNA, group by multi-loci recognized groups
@@ -68,7 +68,7 @@ def get_counts(sn, outdir, tmppath, crounds, ml):
     return out
     
 
-def extract_feat_metadata(outdir, tmppath, gtf, crounds, oneinfile, ml):
+def extract_feat_metadata(tmppath, gtf, crounds, oneinfile, ml):
 
     ##onesn = re.sub('/','_',re.sub('.bam','',oneinfile))
     onesn = re.sub('.bam','', utils.path_leaf(oneinfile))
@@ -80,8 +80,9 @@ def extract_feat_metadata(outdir, tmppath, gtf, crounds, oneinfile, ml):
 
     for i in range(0, crounds.shape[0]):
         cround = crounds.iloc[i]
-        counts = pd.read_table(tmppath + onesn + '_counts_' + cround['r']  + '.csv',
-                               sep = '\t', skiprows = 1, usecols=[0], index_col=0)
+        counts = pd.read_table(
+            os.path.join(tmppath, onesn + '_counts_' + cround['r']  + '.csv'),
+            sep = '\t', skiprows = 1, usecols=[0], index_col=0)
         
         ## ---- Fill feats-metadata frame
         if cround['ml']:
