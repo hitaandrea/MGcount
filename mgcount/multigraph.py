@@ -81,9 +81,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
 
         ## Add matrices
         mgm = mgm_list[0]
-        ##mmwrite(tmppath+samples[0]+'mgm_'+cround['r']+ '.mtx', mgm_list[0])
         for k in range(1,len(mgm_list)):
-            ##mmwrite(tmppath+samples[k]+'mgm_'+cround['r']+ '.mtx', mgm_list[k])
             mgm = mgm + mgm_list[k]
 
         ## Store output matrix
