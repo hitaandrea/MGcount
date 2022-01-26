@@ -26,18 +26,18 @@ def main():
     
     parser_required.add_argument('--bam_infiles',
                                  '-i',
-                                 type=str,
+                                 type = os.path.abspath,
                                  help = 'Alignment input file names \n',
                                  required = True)
  
     parser_required.add_argument('--outdir',
                                  '-o',
-                                 type=str,
-                                 help='Output directory path \n',
+                                 type = os.path.abspath,
+                                 help ='Output directory path \n',
                                  required = True)
     
     parser_required.add_argument('--gtf',
-                                 type=  str,
+                                 type = os.path.abspath,
                                  help = 'Annotations file name \n',
                                  required = True)
     
@@ -178,7 +178,7 @@ def main():
     args = parser.parse_args()
     
     ## Required arguments
-    outdir = os.path.abspath(args.outdir) + '/'
+    outdir = args.outdir
     gtf_filename = os.path.abspath(args.gtf)
     n_cores = args.n_cores
 
@@ -194,7 +194,7 @@ def main():
     btyperounds_filename = args.btyperounds_filename
 
     ## Get input files
-    infiles = [line.rstrip() for line in open(os.path.abspath(args.bam_infiles))]
+    infiles = [os.path.abspath(line.rstrip()) for line in open(args.bam_infiles)]
     if '' in infiles: infiles.remove('')
     
     ## Select default crounds file if non-user-input defined
@@ -237,17 +237,17 @@ def main():
         'suf' : ['',
                  '-exon',
                  '-intron']})
-
+    
     ## Get gene biotypes
     gtf = read_gtf(gtf_filename)
 
     ## Create directory for temporary files
     if not os.path.exists(outdir): os.mkdir(outdir)
-    tmpdir = TemporaryDirectory(prefix = outdir + '.mg_')
-    tmppath = tmpdir.name + '/'
+    tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
+    tmppath = os.path.abspath(tmpdir.name)
     
     ## keep all tmp files
-    ##tmppath = outdir + 'tmp/'
+    ##tmppath = os.path.join(outdir,'tmp')
     ##if not os.path.exists(tmppath): os.mkdir(tmppath)
 
     ## Set method to start parallel child processes to "spawn"
@@ -258,7 +258,7 @@ def main():
     ## ---------------------------------------------------------------------------
     
     ## ----- Hierarchical read. assignation loop by sample
-    crounds = hra.read_assignation_loop(infiles, outdir, fcpath, tmppath, gtf_filename,
+    crounds = hra.read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
                                         crounds, btype_crounds, n_cores, end, strand)
 
     ## ----- Multi-loci group extraction
@@ -266,7 +266,7 @@ def main():
                th_low, th_high, seed) 
 
     ## ----- Expression. level summarization
-    counts = count.extract_count_matrix(infiles, outdir, tmppath, crounds, n_cores, ml)
+    counts = count.extract_count_matrix(infiles, tmppath, crounds, n_cores, ml)
 
     ## ---------------------------------------------------------------------------
     
@@ -279,12 +279,12 @@ def main():
         counts.columns = sid
 
     counts.iloc[nonempty_idx].to_csv(
-        outdir + 'count_matrix.csv', header = True, index = True)
+        os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
     
     ## Save feature metadata table
-    feats_metadata = count.extract_feat_metadata(outdir, tmppath, gtf, crounds, infiles[0], ml)
+    feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles[0], ml)
     feats_metadata.reindex(counts.iloc[nonempty_idx].index).to_csv(
-        outdir + 'feature_metadata.csv')
+        os.path.join(outdir,'feature_metadata.csv'))
 
     print('......')
     print('Voilà.')

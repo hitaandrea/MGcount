@@ -42,19 +42,21 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
             feat_btypes.drop(['biotype'], axis='columns', inplace=True)
         
         ## Get sample file_names
-        fc_infiles = [tmppath + sn + '_fc_' + cround['r'] for sn in samples]
+        fc_infiles = [os.path.join(tmppath, sn + '_fc_' + cround['r']) for sn in samples]
 
         ## Get non-empty features (reduces mg matrix size and speeds-up computation)
-        counts = np.zeros(pd.read_table(tmppath+samples[0]+'_counts_'+ cround['r']+'.csv', 
-                           sep = '\t', skiprows = 1, usecols = [6]).shape[0])
+        counts = np.zeros(pd.read_table(
+            os.path.join(tmppath, samples[0]+'_counts_'+ cround['r']+'.csv'), 
+            sep = '\t', skiprows = 1, usecols = [6]).shape[0])
         for sn in samples:
-            counts = counts + pd.read_table(tmppath+sn+'_counts_'+ cround['r']+'.csv', 
-                                             sep = '\t', skiprows = 1, usecols = [6]).iloc[:,0].to_numpy() 
+            counts = counts + pd.read_table(
+                os.path.join(tmppath, sn+'_counts_'+ cround['r']+'.csv'), 
+                sep = '\t', skiprows = 1, usecols = [6]).iloc[:,0].to_numpy() 
         
-        feats = pd.read_table(tmppath+samples[0]+'_counts_'+cround['r']+'.csv',
-                               sep = '\t', skiprows = 1, usecols = [0]).iloc[
-                                   np.where(counts!= 0)[0].tolist(),0].reset_index(
-                                       drop = True)    
+        feats = pd.read_table(
+            os.path.join(tmppath, samples[0]+'_counts_'+cround['r']+'.csv'),
+            sep = '\t', skiprows = 1, usecols = [0]).iloc[
+                np.where(counts!= 0)[0].tolist(),0].reset_index(drop = True)    
                                        
         ## Get gene biotypes
         feats = pd.DataFrame({cround['attr']:feats}).merge(
@@ -65,7 +67,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
         feats = feats.drop_duplicates().reset_index(drop = True)
         feats.loc[feats[cround['attr']].duplicated(keep=False), cround['btype']] = 'Hybrid'
         feats = feats.drop_duplicates().reset_index(drop = True)
-        feats.to_csv(tmppath + 'feats_'+ cround['r'] + '.csv')
+        feats.to_csv(os.path.join(tmppath, 'feats_'+ cround['r'] + '.csv'))
         
         ## ---------------- Extract adjacency matrix
         print("Building " + cround['r'] + " multi-mappers graph" )
@@ -79,13 +81,11 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
 
         ## Add matrices
         mgm = mgm_list[0]
-        mmwrite(tmppath+samples[0]+'mgm_'+cround['r']+ '.mtx', mgm_list[0])
         for k in range(1,len(mgm_list)):
-            mmwrite(tmppath+samples[k]+'mgm_'+cround['r']+ '.mtx', mgm_list[k])
             mgm = mgm + mgm_list[k]
 
         ## Store output matrix
-        mmwrite(outdir + 'multigraph_matrix_'+ cround['r'] +'.mtx', mgm)
+        mmwrite(os.path.join(outdir,'multigraph_matrix_'+ cround['r'] +'.mtx'), mgm)
         ##mgm = mmread(outdir + 'multigraph_matrix_'+ cround['r'] +'.mtx')
         
         ## ---------------- Build graph and extract multiloci groups
@@ -124,7 +124,8 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
         ml = ml.set_index(cround['attr'])
         ml = ml.reindex(index = feats[cround['attr']].tolist())
         ml = ml.reset_index()
-        ml.to_csv(outdir+'multigraph_communities_'+cround['r']+'.csv', index = False)
+        ml.to_csv(os.path.join(outdir,'multigraph_communities_' +
+                               cround['r'] + '.csv'), index = False)
         out_ml[cround['annot']] = ml
         
     return out_ml
@@ -141,7 +142,7 @@ def extract_adjacency_matrix(fc_infile, feat_list):
         M_sparse = scipy.sparse.csc_matrix(M)
         return M_sparse
 
-    os.system('sort -o ' + fc_infile + ' ' + fc_infile)
+    os.system('sort -o "' + fc_infile + '" "' + fc_infile + '"')
     fc_in = open(fc_infile, 'r')
     currentRead = fc_in.readline().rstrip().split('\t')
     connected_vertices = [int(vdict[vname]) for vname in currentRead[3].split(',')]
