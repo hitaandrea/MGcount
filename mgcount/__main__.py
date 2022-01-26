@@ -243,12 +243,12 @@ def main():
 
     ## Create directory for temporary files
     if not os.path.exists(outdir): os.mkdir(outdir)
-    ##tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
-    ##tmppath = os.path.abspath(tmpdir.name)
+    tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
+    tmppath = os.path.abspath(tmpdir.name)
     
     ## keep all tmp files
-    tmppath = os.path.join(outdir,'tmp')
-    if not os.path.exists(tmppath): os.mkdir(tmppath)
+    ##tmppath = os.path.join(outdir,'tmp')
+    ##if not os.path.exists(tmppath): os.mkdir(tmppath)
 
     ## Set method to start parallel child processes to "spawn"
     mp.set_start_method("spawn")
