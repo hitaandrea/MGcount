@@ -86,7 +86,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
 
         ## Store output matrix
         mmwrite(os.path.join(outdir,'multigraph_matrix_'+ cround['r'] +'.mtx'), mgm)
-        ##mgm = mmread(outdir + 'multigraph_matrix_'+ cround['r'] +'.mtx')
+        ##mgm = mmread(os.path.join(outdir,'multigraph_matrix_'+ cround['r'] +'.mtx'))
         
         ## ---------------- Build graph and extract multiloci groups
         print("Detecting " + cround['r'] + " communities from multi-mappers graph")
@@ -152,8 +152,8 @@ def extract_adjacency_matrix(fc_infile, feat_list):
     ## -------- LOOP: Adjacency matrix generation
     while i <= maxIter:
         newRead = fc_in.readline().rstrip().split('\t')
-
-        if newRead[0] != currentRead[0]: 
+        
+        if newRead[0] != currentRead[0]:
             edges = list(it.product(connected_vertices, repeat = 2))
             connected_vertices = []
             currentRead = newRead
@@ -165,9 +165,13 @@ def extract_adjacency_matrix(fc_infile, feat_list):
             break
         
         for vname in newRead[3].split(','):
-            connected_vertices.append(int(vdict[vname]))
+            idxM = vdict.get(vname)
+            if idxM is not None:
+                connected_vertices.append(int(idxM))
+            else:
+                'Null counts for' + vname
         i+=1
-
+    
     print('   --> Multi-mappers adjacency matrix successfully extracted from ' +
           str(nreads) + ' reads and ' +
           str(i-1) + ' alignments!')
@@ -227,7 +231,8 @@ def get_graph_loci_groups(inM, inFeats, cround, th_low, th_high, seed):
     out = out.merge(out.rename(columns = {'naln':'naln_community'}
         ).groupby(['mb']).naln_community.sum().reset_index(), on = 'mb')
 
-    out['community_flag'] =  (out['mb'].isin(out['mb'].loc[out.duplicated('mb')])) & (out['naln_community'] > 50)
+    out['community_flag'] = (out['mb'].isin(out['mb'].loc[out.duplicated('mb')])) & (out['naln_community'] > 50)
+    out.loc[out['community_flag'] == False, 'naln_community'] = out.loc[out['community_flag'] == False, 'naln']
     out['community_id']=None; out['community_name']=None
     out['community_name_dedup']=None; out['community_biotype'] = None
 
