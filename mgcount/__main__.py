@@ -4,12 +4,15 @@
 import argparse
 import os
 import re
+
 import pandas as pd
 import numpy as np
 import multiprocessing as mp
+
 from warnings import simplefilter
 from tempfile import TemporaryDirectory
 from gtfparse import read_gtf
+from shutil import rmtree
 
 ## -- MGcount source code
 from mgcount import hierarchassign as hra
@@ -173,6 +176,9 @@ def main():
     
     ## Suppress future warnings
     simplefilter(action='ignore', category=FutureWarning)
+
+    ## Set method to start parallel child processes to "spawn"
+    mp.set_start_method("spawn")
     
     ##--------------- Parse arguments
     args = parser.parse_args()
@@ -249,43 +255,43 @@ def main():
     ## keep all tmp files
     ##tmppath = os.path.join(outdir,'tmp')
     ##if not os.path.exists(tmppath): os.mkdir(tmppath)
-
-    ## Set method to start parallel child processes to "spawn"
-    mp.set_start_method("spawn")
     
-    
-    ## RUN COUNTING PIPELINE
-    ## ---------------------------------------------------------------------------
-    
-    ## ----- Hierarchical read. assignation loop by sample
-    crounds = hra.read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
-                                        crounds, btype_crounds, n_cores, end, strand)
-
-    ## ----- Multi-loci group extraction
-    ml = mg.MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
-               th_low, th_high, seed) 
-
-    ## ----- Expression. level summarization
-    counts = count.extract_count_matrix(infiles, tmppath, crounds, n_cores, ml)
-
-    ## ---------------------------------------------------------------------------
-    
-    ##--------------- Save count matrix
-    ## Save only nonempty features
-    ## Will label samples by using filename fragment that is distinct in all samples
-    nonempty_idx = np.where(counts.sum(axis=1)!= 0)[0].tolist()
-    if len(args.sample_id) > 0:
-        sid = np.array(pd.read_csv(args.sample_id, header = None)[0])
-        counts.columns = sid
-
-    counts.iloc[nonempty_idx].to_csv(
-        os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
-    
-    ## Save feature metadata table
-    feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles[0], ml)
-    feats_metadata.reindex(counts.iloc[nonempty_idx].index).to_csv(
-        os.path.join(outdir,'feature_metadata.csv'))
-
+    try: 
+        ## RUN COUNTING PIPELINE
+        ## ---------------------------------------------------------------------------
+        
+        ## ----- Hierarchical read. assignation loop by sample
+        crounds = hra.read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
+                                            crounds, btype_crounds, n_cores, end, strand)
+        
+        ## ----- Multi-loci group extraction
+        ml = mg.MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
+                   th_low, th_high, seed) 
+        
+        ## ----- Expression. level summarization
+        counts = count.extract_count_matrix(infiles, tmppath, crounds, n_cores, ml)
+        
+        ## ---------------------------------------------------------------------------
+        
+        ##--------------- Save count matrix
+        ## Save only nonempty features
+        ## Will label samples by using filename fragment that is distinct in all samples
+        nonempty_idx = np.where(counts.sum(axis=1)!= 0)[0].tolist()
+        if len(args.sample_id) > 0:
+            sid = np.array(pd.read_csv(args.sample_id, header = None)[0])
+            counts.columns = sid
+            
+        counts.iloc[nonempty_idx].to_csv(
+            os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
+        
+        ## Save feature metadata table
+        feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles[0], ml)
+        feats_metadata.reindex(counts.iloc[nonempty_idx].index).to_csv(
+            os.path.join(outdir,'feature_metadata.csv'))
+        
+    finally:
+        rmtree(tmppath)
+        
     print('......')
     print('Voilà.')
     print('Olé!')
