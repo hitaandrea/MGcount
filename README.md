@@ -26,7 +26,7 @@ python3 -m mgcount [args]
 
 ### Download and run the executable program
 
-Alternatively can download the latest release as a binary executable file [here](https://github.com/hitaandrea/MGcount/releases/download/1.0.2/MGcount). 
+Alternatively can download the latest release as a binary executable file [here](https://github.com/hitaandrea/MGcount/releases/download/v1.0.2/MGcount). 
 
 Save the program file to your Linux system and set the permissions to allow executing the file as program:
 
