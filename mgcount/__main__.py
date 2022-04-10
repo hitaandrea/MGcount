@@ -22,7 +22,7 @@ from mgcount import expreport as count
 def main():
 
     parser = argparse.ArgumentParser(
-        description = """MGcount RNA-seq quantification pipeline \n""")
+        description = """MGcount RNA-seq quantification pipeline v1.0.2 \n""")
         
     ##--------------- Required I/O
     parser_required = parser.add_argument_group('required arguments')
@@ -290,7 +290,8 @@ def main():
             os.path.join(outdir,'feature_metadata.csv'))
         
     finally:
-        rmtree(tmppath)
+        if os.path.exists(tmppath):
+            rmtree(tmppath)
         
     print('......')
     print('Voilà.')
