@@ -13,6 +13,8 @@ from warnings import simplefilter
 from tempfile import TemporaryDirectory
 from gtfparse import read_gtf
 from shutil import rmtree
+from scipy import sparse
+from scipy.io import mmwrite
 
 ## -- MGcount source code
 from mgcount import hierarchassign as hra
@@ -62,6 +64,11 @@ def main():
                         '--paired_flag',
                         action = 'store_true',
                         help = 'Paired end flag \n')
+
+    parser.add_argument('-m',
+                        '--mtx',
+                        action = 'store_true',
+                        help = 'Output count matrix in sparse format \n')
     
     parser.add_argument('-s',
                         '--strand_option',
@@ -92,7 +99,7 @@ def main():
                         help = '''Optional fixed seed for random numbers generation 
                                   during communities detection\n''',
                         required = False,
-                        default = None) 
+                        default = None)
     
     ## ---- Long round config.
     parser.add_argument('--feature_output_long',
@@ -190,6 +197,7 @@ def main():
 
     ## Params
     end = ('Paired' if args.paired_flag else 'Single')
+    mtxF = args.mtx
     strand = args.strand_option
     th_high = args.th_high
     th_low = args.th_low
@@ -274,16 +282,24 @@ def main():
         ## ---------------------------------------------------------------------------
         
         ##--------------- Save count matrix
+
         ## Save only nonempty features
-        ## Will label samples by using filename fragment that is distinct in all samples
         nonempty_idx = np.where(counts.sum(axis=1)!= 0)[0].tolist()
+
+        ## Will label samples by using filename fragment that is distinct in all samples
         if len(args.sample_id) > 0:
             sid = np.array(pd.read_csv(args.sample_id, header = None)[0])
             counts.columns = sid
+
+        ## Save count matrix
+        if mtxF:
+             mmwrite(
+                 os.path.join(outdir,'count_matrix.mtx'),
+                 sparse.csr_matrix(counts.iloc[nonempty_idx].values))
+        else:
+            counts.iloc[nonempty_idx].to_csv(
+                os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
             
-        counts.iloc[nonempty_idx].to_csv(
-            os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
-        
         ## Save feature metadata table
         feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles[0], ml)
         feats_metadata.reindex(counts.iloc[nonempty_idx].index).to_csv(
