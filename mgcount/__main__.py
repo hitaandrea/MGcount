@@ -299,6 +299,10 @@ def main():
         else:
             counts.iloc[nonempty_idx].to_csv(
                 os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
+
+        ## Save sample metadata table
+        pd.DataFrame({'bam_infile':infiles, 'sample':counts.columns}).to_csv(
+            os.path.join(outdir,'sample_metadata.csv'), index = False)
             
         ## Save feature metadata table
         feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles[0], ml)
