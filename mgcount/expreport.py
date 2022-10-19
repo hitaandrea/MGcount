@@ -6,35 +6,54 @@ import multiprocessing as mp
 import numpy as np
 import os as os
 import re as re
+from scipy import sparse
 from functools import partial
-from mgcount import utils
 
-def extract_count_matrix(infiles, tmppath, crounds, n_cores, ml=None):
+def extract_count_matrix(infiles, tmppath, crounds, n_cores, ml=None, mtxF=False):
 
     print("--------------------------------------------------------")
     print("Computing expression matrix (3/3)")
     print("--------------------------------------------------------")
 
-    ## Get sample file_names
-    samples = [re.sub('.bam','', utils.path_leaf(infile)) for infile in infiles]
-        
-    ## Build count_matrix by sample
+    ## Get features
+    features = pd.Series(get_counts(sn=infiles.index[0], tmppath=tmppath, crounds=crounds, ml=ml, mtxF=False).index)
+    
+    ## Set number of cores
     n_cores = min(mp.cpu_count(), n_cores)
-    with mp.Pool(processes = n_cores) as pool:
-        func_gc = partial(get_counts,
-                          tmppath = tmppath,
-                          crounds = crounds,
-                          ml = ml)
-        counts = pd.concat(pool.map(func_gc, samples), axis = 1)
 
-    ## Set columns to sample names
-    counts.columns = samples
+    ## Build count_matrix by sample
+    if mtxF is False:
+        with mp.Pool(processes = n_cores) as pool:
+            func_gc = partial(get_counts,
+                              tmppath = tmppath,
+                              crounds = crounds,
+                              ml = ml,
+                              mtxF = mtxF)
+            counts = pd.concat(pool.map(func_gc, infiles.index), axis = 1)
+    else:
+        with mp.Pool(processes = n_cores) as pool:
+            func_gc = partial(get_counts,
+                              tmppath = tmppath,
+                              crounds = crounds,
+                              ml = ml,
+                              mtxF = mtxF)
+            counts = sparse.csr_matrix(sparse.hstack(pool.map(func_gc, infiles.index)))
 
+    ## Get only non-empty features
+    nonempty_idx = np.where(counts.sum(axis=1)!= 0)[0].tolist()
+    features = features.iloc[nonempty_idx]
+    features.index = features
+    
+    if mtxF is False:
+        counts = counts.iloc[nonempty_idx]
+    else:
+        counts = counts[nonempty_idx,:]
+    
     ## Extract feat. metadata table
-    return counts
+    return [counts, features]
         
 
-def get_counts(sn, tmppath, crounds, ml):
+def get_counts(sn, tmppath, crounds, ml, mtxF):
 
     print(sn)
 
@@ -65,13 +84,14 @@ def get_counts(sn, tmppath, crounds, ml):
         out = out.append(df)
             
     out = out.set_index('feature')
-    return out
-    
 
-def extract_feat_metadata(tmppath, gtf, crounds, oneinfile, ml):
+    if mtxF is False:
+        return out
+    else:
+        return sparse.csr_matrix(out)
 
-    ##onesn = re.sub('/','_',re.sub('.bam','',oneinfile))
-    onesn = re.sub('.bam','', utils.path_leaf(oneinfile))
+
+def extract_feat_metadata(tmppath, gtf, crounds, onesn, ml):
     
     ## Initialize data.frame
     colnames = ['feature','assignation_round','annotations_subset',

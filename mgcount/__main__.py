@@ -20,6 +20,7 @@ from scipy.io import mmwrite
 from mgcount import hierarchassign as hra
 from mgcount import multigraph as mg
 from mgcount import expreport as count
+from mgcount import utils 
 
 def main():
 
@@ -47,11 +48,12 @@ def main():
                                  required = True)
     
     ##--------------- Optional arguments
-    parser.add_argument('--sample_id',
-                        type=str,
-                        help = 'Optional sampleID names \n',
+    parser.add_argument('--sample_names',
+                        type= os.path.abspath,
+                        help = '''Optional sample names to be used as matrix column ids
+                                (alternatively, "bam_infiles" names will be used)"\n''',
                         required = False, 
-                        default = '')
+                        default = None)
     
     parser.add_argument('-T',
                         '--n_cores',
@@ -193,7 +195,6 @@ def main():
     ## Required arguments
     outdir = args.outdir
     gtf_filename = os.path.abspath(args.gtf)
-    n_cores = args.n_cores
 
     ## Params
     end = ('Paired' if args.paired_flag else 'Single')
@@ -202,22 +203,36 @@ def main():
     th_high = args.th_high
     th_low = args.th_low
     seed = args.seed
-    
+    n_cores = args.n_cores
+
     ## Additional optinal arguments
     fcpath = args.featureCounts_path
     btyperounds_filename = args.btyperounds_filename
 
-    ## Get input files
-    infiles = [os.path.abspath(line.rstrip()) for line in open(args.bam_infiles)]
-    if '' in infiles: infiles.remove('')
+    ## --------------- Read inputs
     
-    ## Select default crounds file if non-user-input defined
-    if btyperounds_filename == None:
+    ## Get input files
+    infiles = pd.Series([os.path.abspath(line.rstrip()) for line in open(args.bam_infiles)])
+    if '' in infiles: infiles.remove('')
+
+    ## Get annotations file
+    gtf = read_gtf(gtf_filename)
+    
+    ## Define sample_names as file path with underscores if not parsed as argument
+    if args.sample_names is None:
+        infiles.index = [re.sub('/','_',re.sub('.bam','',infile)) for infile in infiles]
+        snames = [re.sub('.bam','', utils.path_leaf(infile)) for infile in infiles]
+    else:
+        infiles.index = [os.path.abspath(line.rstrip()) for line in open(args.sample_names)]
+        snames = infiles.index
+
+    ## Select default crounds file if non parsed as argument
+    if btyperounds_filename is None:
         ##btype_crounds = config.get_btypes_by_crounds() for major compatibility
         ##btype_crounds = pd.read_csv(utils.resource_path('btypes_crounds.csv')) for compiled version
         btype_crounds = pd.read_csv(os.path.dirname(__file__) + '/data/btypes_crounds.csv')
     else: btype_crounds = pd.read_csv(btyperounds_filename)
-    
+
     ## Counting rounds configuration
     crounds = pd.DataFrame({
         'r':['small',
@@ -252,17 +267,15 @@ def main():
                  '-exon',
                  '-intron']})
     
-    ## Get gene biotypes
-    gtf = read_gtf(gtf_filename)
 
     ## Create directory for temporary files
     if not os.path.exists(outdir): os.mkdir(outdir)
-    tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
-    tmppath = os.path.abspath(tmpdir.name)
+    ##tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
+    ##tmppath = os.path.abspath(tmpdir.name)
     
     ## keep all tmp files
-    ##tmppath = os.path.join(outdir,'tmp')
-    ##if not os.path.exists(tmppath): os.mkdir(tmppath)
+    tmppath = os.path.join(outdir,'tmp')
+    if not os.path.exists(tmppath): os.mkdir(tmppath)
     
     try: 
         ## RUN COUNTING PIPELINE
@@ -274,40 +287,30 @@ def main():
         
         ## ----- Multi-loci group extraction
         ml = mg.MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
-                   th_low, th_high, seed) 
+                   th_low, th_high, seed)
         
         ## ----- Expression. level summarization
-        counts = count.extract_count_matrix(infiles, tmppath, crounds, n_cores, ml)
-        
+        out = count.extract_count_matrix(infiles, tmppath, crounds, n_cores, ml, mtxF)
         ## ---------------------------------------------------------------------------
+
         
-        ##--------------- Save count matrix
-
-        ## Save only nonempty features
-        nonempty_idx = np.where(counts.sum(axis=1)!= 0)[0].tolist()
-
-        ## Will label samples by using filename fragment that is distinct in all samples
-        if len(args.sample_id) > 0:
-            sid = np.array(pd.read_csv(args.sample_id, header = None)[0])
-            counts.columns = sid
-
+        ## --------------- Write outputs
+        counts = out[0]; features = out[1]
+                
         ## Save count matrix
         if mtxF:
-             mmwrite(
-                 os.path.join(outdir,'count_matrix.mtx'),
-                 sparse.csr_matrix(counts.iloc[nonempty_idx].values))
+             mmwrite(os.path.join(outdir,'count_matrix.mtx'),counts)
         else:
-            counts.iloc[nonempty_idx].to_csv(
-                os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
+            counts.columns = snames
+            counts.to_csv(os.path.join(outdir,'count_matrix.csv'), header=True, index=True)
 
         ## Save sample metadata table
-        pd.DataFrame({'bam_infile':infiles, 'sample':counts.columns}).to_csv(
-            os.path.join(outdir,'sample_metadata.csv'), index = False)
+        pd.DataFrame({'bam_infile':infiles, 'sample':snames}).to_csv(
+            os.path.join(outdir,'sample_metadata.csv'), index=False)
             
         ## Save feature metadata table
-        feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles[0], ml)
-        feats_metadata.reindex(counts.iloc[nonempty_idx].index).to_csv(
-            os.path.join(outdir,'feature_metadata.csv'))
+        feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles.index[0], ml)
+        feats_metadata.reindex(features).to_csv(os.path.join(outdir,'feature_metadata.csv'))
         
     finally:
         if os.path.exists(tmppath):
