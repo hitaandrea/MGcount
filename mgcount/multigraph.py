@@ -26,8 +26,6 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
     print("--------------------------------------------------------")
     
     out_ml = dict()
-    ## samples = [re.sub('/','_',re.sub('.bam','',infile)) for infile in infiles]
-    ## samples = [re.sub('.bam','', utils.path_leaf(infile)) for infile in infiles]
     
     ## Setup multicore processing
     n_cores = min(mp.cpu_count(), n_cores)
