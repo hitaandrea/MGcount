@@ -46,16 +46,13 @@ def read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
                        strand = strand)
     
     with mp.Pool(processes = n_cores) as pool:
-        result_list = pool.map(func_arh, infiles)
+        result_list = pool.starmap(func_arh, zip(infiles.tolist(), infiles.index.tolist()))
 
     return crounds
 
 
 
-def assign_rna_reads_hierarchically(infile, fcpath, tmppath, crounds, end, strand):
-
-    ##sn = re.sub('/','_',re.sub('.bam','',infile))
-    sn = re.sub('.bam','', utils.path_leaf(infile))
+def assign_rna_reads_hierarchically(infile, sn, fcpath, tmppath, crounds, end, strand):
 
     ## Copy alignment file
     copyfile(infile, os.path.join(tmppath, sn + '_alignment.bam'))
