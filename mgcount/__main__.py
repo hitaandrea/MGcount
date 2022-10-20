@@ -182,12 +182,14 @@ def main():
                                   assignation_round custom defined pairs \n''',
                         required = False,
                         default = None)
+
     
     ## Suppress future warnings
     simplefilter(action='ignore', category=FutureWarning)
 
     ## Set method to start parallel child processes to "spawn"
     mp.set_start_method("spawn")
+
     
     ##--------------- Parse arguments
     args = parser.parse_args()
@@ -209,6 +211,7 @@ def main():
     fcpath = args.featureCounts_path
     btyperounds_filename = args.btyperounds_filename
 
+    
     ## --------------- Read inputs
     
     ## Get input files
@@ -218,18 +221,21 @@ def main():
     ## Get annotations file
     gtf = read_gtf(gtf_filename)
     
-    ## Define sample_names as file path with underscores if not parsed as argument
-    if args.sample_names is None:
-        infiles.index = [re.sub('/','_',re.sub('.bam','',infile)) for infile in infiles]
-        snames = [re.sub('.bam','', utils.path_leaf(infile)) for infile in infiles]
-    else:
+    ## If not parse as argument, define sample_names as filenames, with full-paths if duplicates 
+    infiles.index = [re.sub('/','_',re.sub('.bam','',infile)) for infile in infiles]
+
+    tvar = [re.sub('.bam','', utils.path_leaf(infile)) for infile in infiles]
+    if len(tvar) == len(set(tvar)):
+        infiles.index = tvar
+    del tvar
+    
+    if args.sample_names is not None:
         infiles.index = [os.path.abspath(line.rstrip()) for line in open(args.sample_names)]
-        snames = infiles.index
 
     ## Select default crounds file if non parsed as argument
+    ##btype_crounds = config.get_btypes_by_crounds() for major compatibility
+    ##btype_crounds = pd.read_csv(utils.resource_path('btypes_crounds.csv')) for compiled version
     if btyperounds_filename is None:
-        ##btype_crounds = config.get_btypes_by_crounds() for major compatibility
-        ##btype_crounds = pd.read_csv(utils.resource_path('btypes_crounds.csv')) for compiled version
         btype_crounds = pd.read_csv(os.path.dirname(__file__) + '/data/btypes_crounds.csv')
     else: btype_crounds = pd.read_csv(btyperounds_filename)
 
@@ -267,15 +273,14 @@ def main():
                  '-exon',
                  '-intron']})
     
-
     ## Create directory for temporary files
     if not os.path.exists(outdir): os.mkdir(outdir)
-    ##tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
-    ##tmppath = os.path.abspath(tmpdir.name)
+    tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
+    tmppath = os.path.abspath(tmpdir.name)
     
     ## keep all tmp files
-    tmppath = os.path.join(outdir,'tmp')
-    if not os.path.exists(tmppath): os.mkdir(tmppath)
+    ## tmppath = os.path.join(outdir,'tmp')
+    ## if not os.path.exists(tmppath): os.mkdir(tmppath)
     
     try: 
         ## RUN COUNTING PIPELINE
@@ -290,23 +295,22 @@ def main():
                    th_low, th_high, seed)
         
         ## ----- Expression. level summarization
-        out = count.extract_count_matrix(infiles, tmppath, crounds, n_cores, ml, mtxF)
+        counts, features = count.extract_count_matrix(infiles, tmppath, crounds,
+                                                      n_cores, ml, mtxF)
         ## ---------------------------------------------------------------------------
 
         
         ## --------------- Write outputs
-        counts = out[0]; features = out[1]
                 
         ## Save count matrix
         if mtxF:
-             mmwrite(os.path.join(outdir,'count_matrix.mtx'),counts)
+             mmwrite(os.path.join(outdir,'count_matrix.mtx'), counts)
         else:
-            counts.columns = snames
+            counts.columns = infiles.index
             counts.to_csv(os.path.join(outdir,'count_matrix.csv'), header=True, index=True)
 
         ## Save sample metadata table
-        pd.DataFrame({'bam_infile':infiles, 'sample':snames}).to_csv(
-            os.path.join(outdir,'sample_metadata.csv'), index=False)
+        infiles.to_csv(os.path.join(outdir,'sample_metadata.csv'), index=True)
             
         ## Save feature metadata table
         feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles.index[0], ml)

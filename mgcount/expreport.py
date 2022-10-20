@@ -16,7 +16,8 @@ def extract_count_matrix(infiles, tmppath, crounds, n_cores, ml=None, mtxF=False
     print("--------------------------------------------------------")
 
     ## Get features
-    features = pd.Series(get_counts(sn=infiles.index[0], tmppath=tmppath, crounds=crounds, ml=ml, mtxF=False).index)
+    features = pd.Series(get_counts(sn=infiles.index[0], tmppath=tmppath,
+                                    crounds=crounds, ml=ml, mtxF=False, prF=False).index)
     
     ## Set number of cores
     n_cores = min(mp.cpu_count(), n_cores)
@@ -53,9 +54,9 @@ def extract_count_matrix(infiles, tmppath, crounds, n_cores, ml=None, mtxF=False
     return [counts, features]
         
 
-def get_counts(sn, tmppath, crounds, ml, mtxF):
+def get_counts(sn, tmppath, crounds, ml, mtxF, prF=True):
 
-    print(sn)
+    if prF: print(sn)
 
     ## By counting round, retrieve output and combine
     out = pd.DataFrame()
