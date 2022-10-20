@@ -56,7 +56,7 @@ def extract_count_matrix(infiles, tmppath, crounds, n_cores, ml=None, mtxF=False
 
 def get_counts(sn, tmppath, crounds, ml, mtxF, prF=True):
 
-    if prF: print(sn)
+    if prF: print('--> Building count matrix for ' + sn)
 
     ## By counting round, retrieve output and combine
     out = pd.DataFrame()

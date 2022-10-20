@@ -117,7 +117,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
                                else df[cround['attr']].iloc[i]
                                for i in range(df.shape[0])]
             ml = ml.append(df)
-            print('   --> ' + btype1 + ' multi-loci groups successfully extracted.')
+            print('--> ' + btype1 + ' multi-loci communities detected.')
 
         ## Store multi-loci groups list
         ml = ml.set_index(cround['attr'])
@@ -171,7 +171,7 @@ def extract_adjacency_matrix(fc_infile, feat_list):
                 'Null counts for' + vname
         i+=1
     
-    print('   --> Multi-mappers adjacency matrix successfully extracted from ' +
+    print('--> Multi-mappers adjacency matrix successfully extracted from ' +
           str(nreads) + ' reads and ' +
           str(i-1) + ' alignments!')
     M_sparse = scipy.sparse.csc_matrix(M)
