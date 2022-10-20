@@ -33,7 +33,7 @@ def main():
     parser_required.add_argument('--bam_infiles',
                                  '-i',
                                  type = os.path.abspath,
-                                 help = 'Alignment input file names \n',
+                                 help = 'Alignment (.bam) input file names\n',
                                  required = True)
  
     parser_required.add_argument('--outdir',
@@ -44,33 +44,33 @@ def main():
     
     parser_required.add_argument('--gtf',
                                  type = os.path.abspath,
-                                 help = 'Annotations file name \n',
+                                 help = 'Annotations (.gtf) file name \n',
                                  required = True)
     
     ##--------------- Optional arguments
     parser.add_argument('--sample_names',
                         type= os.path.abspath,
                         help = '''Optional sample names to be used as matrix column ids
-                                (alternatively, "bam_infiles" names will be used)"\n''',
+                                (alternatively, "bam_infiles" file names will be used)"\n''',
                         required = False, 
                         default = None)
     
     parser.add_argument('-T',
                         '--n_cores',
                         type = int,
-                        help = 'Number of cores for parallelization \n',
+                        help = 'Number of cores for parallelization (default 1) \n',
                         required = False,
                         default = 1)
                             
     parser.add_argument('-p',
                         '--paired_flag',
                         action = 'store_true',
-                        help = 'Paired end flag \n')
+                        help = 'Paired end flag (default 1)\n')
 
     parser.add_argument('-m',
                         '--mtx',
                         action = 'store_true',
-                        help = 'Output count matrix in sparse format \n')
+                        help = 'Output count matrix in sparse format (default False)\n')
     
     parser.add_argument('-s',
                         '--strand_option',
@@ -85,21 +85,21 @@ def main():
     parser.add_argument('--th_low',
                         type = float,
                         help = '''Low minimal threshold for feature-to-feature
-                                   multi-mapping fraction\n''',
+                                   multi-mapping fraction (default 0.01)\n''',
                         required = False,
                         default = 0.01)    
                         
     parser.add_argument('--th_high',
                         type = float,
                         help = '''High minimal threshold for feature-to-feature
-                                   multi-mapping fraction\n''',
+                                   multi-mapping fraction (default 0.75)\n''',
                         required = False,
                         default = 0.75)    
     
     parser.add_argument('--seed',
                         type = float,
                         help = '''Optional fixed seed for random numbers generation 
-                                  during communities detection\n''',
+                                  during communities detection (default random integer)\n''',
                         required = False,
                         default = None)
     
@@ -107,14 +107,14 @@ def main():
     parser.add_argument('--feature_output_long',
                         type = str,
                         help = '''GTF field name for which to summarize 
-                                  expresion of longRNA assigned reads\n''',
+                                  expresion of longRNA assigned reads (default: gene_name)\n''',
                         required = False,
                         default = 'gene_name')
     
     parser.add_argument('--feature_biotype_long',
                         type = str,
                         help = '''GTF field name defining biotype for
-                                  longRNA features\n''',
+                                  longRNA features (default: gene_biotype)\n''',
                         required = False,
                         default = 'gene_biotype')
     
@@ -128,7 +128,8 @@ def main():
     parser.add_argument('--ml_flag_long',
                         type = int,
                         help = '''Multi-loci graph detection based 
-                                  groups flag for long round\n''',
+                                  groups flag for long round.
+                                  Options are 1: enable (default) and 0: disable\n''',
                         required = False,
                         default = 1)
     
@@ -136,35 +137,38 @@ def main():
     parser.add_argument('--feature_small',
                         type = str,
                         help = '''GTF feature type for smallRNA reads 
-                                  to be assigned to\n''',
+                                  to be assigned to (default: transcript)\n''',
                         required = False,
                         default = 'transcript')
     
     parser.add_argument('--feature_output_small',
                         type = str,
                         help = '''GTF field name for which to summarize 
-                                  counts of smallRNA assigned reads\n''',
+                                  counts of smallRNA assigned reads
+                                  (default: transcript_name)\n''',
                         required = False,
                         default = 'transcript_name')
     
     parser.add_argument('--feature_biotype_small',
                         type = str,
                         help = '''GTF field name defining biotype for
-                                  smallRNA features\n''',
+                                  smallRNA features
+                                  (default: transcript_biotype)\n''',
                         required = False,
                         default = 'transcript_biotype')
     
     parser.add_argument('--min_overlap_small',
                         type = str,
                         help = '''Minimal feature-alignment overlapping fraction
-                                  for assignation (default 1) for long round \n''',
+                                  for assignation (default 1) for small round \n''',
                         required = False,
                         default = '1')
 
     parser.add_argument('--ml_flag_small',
                         type = int,
                         help = '''Multi-loci graph detection 
-                                  based groups flag for small round\n''',
+                                  based groups flag for small round.
+                                  Options are 1: enable (default) and 0: disable\n''',
                         required = False,
                         default = 1)
     
@@ -179,7 +183,8 @@ def main():
     
     parser.add_argument('--btyperounds_filename',
                         help = '''Optional .csv file with gene_biotype 
-                                  assignation_round custom defined pairs \n''',
+                                  assignation_round custom defined pairs
+                                  (alternatively, in-built btyperounds will be used)\n''',
                         required = False,
                         default = None)
 
