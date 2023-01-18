@@ -82,7 +82,7 @@ def get_counts(sn, tmppath, crounds, ml, mtxF, prF=True):
 
         ## Append counting round
         df['feature'] = df['feature'] + cround['suf']
-        out = out.append(df)
+        out = pd.concat([out, df])
             
     out = out.set_index('feature')
 
