@@ -18,6 +18,7 @@ from shutil import rmtree
 from mgcount import hierarchassign as hra
 from mgcount import multigraph as mg
 from mgcount import expreport as count
+from mgcount import utils 
 
 def main():
 
@@ -30,7 +31,7 @@ def main():
     parser_required.add_argument('--bam_infiles',
                                  '-i',
                                  type = os.path.abspath,
-                                 help = 'Alignment input file names \n',
+                                 help = 'Alignment (.bam) input file names\n',
                                  required = True)
  
     parser_required.add_argument('--outdir',
@@ -41,27 +42,33 @@ def main():
     
     parser_required.add_argument('--gtf',
                                  type = os.path.abspath,
-                                 help = 'Annotations file name \n',
+                                 help = 'Annotations (.gtf) file name \n',
                                  required = True)
     
     ##--------------- Optional arguments
-    parser.add_argument('--sample_id',
-                        type=str,
-                        help = 'Optional sampleID names \n',
+    parser.add_argument('--sample_names',
+                        type= os.path.abspath,
+                        help = '''Optional sample names to be used as matrix column ids
+                                (alternatively, "bam_infiles" file names will be used)"\n''',
                         required = False, 
-                        default = '')
+                        default = None)
     
     parser.add_argument('-T',
                         '--n_cores',
                         type = int,
-                        help = 'Number of cores for parallelization \n',
+                        help = 'Number of cores for parallelization (default 1) \n',
                         required = False,
                         default = 1)
                             
     parser.add_argument('-p',
                         '--paired_flag',
                         action = 'store_true',
-                        help = 'Paired end flag \n')
+                        help = 'Paired end flag (default 1)\n')
+
+    parser.add_argument('-m',
+                        '--mtx',
+                        action = 'store_true',
+                        help = 'Output count matrix in sparse format (default False)\n')
     
     parser.add_argument('-s',
                         '--strand_option',
@@ -76,36 +83,36 @@ def main():
     parser.add_argument('--th_low',
                         type = float,
                         help = '''Low minimal threshold for feature-to-feature
-                                   multi-mapping fraction\n''',
+                                   multi-mapping fraction (default 0.01)\n''',
                         required = False,
                         default = 0.01)    
                         
     parser.add_argument('--th_high',
                         type = float,
                         help = '''High minimal threshold for feature-to-feature
-                                   multi-mapping fraction\n''',
+                                   multi-mapping fraction (default 0.75)\n''',
                         required = False,
                         default = 0.75)    
     
     parser.add_argument('--seed',
                         type = float,
                         help = '''Optional fixed seed for random numbers generation 
-                                  during communities detection\n''',
+                                  during communities detection (default random integer)\n''',
                         required = False,
-                        default = None) 
+                        default = None)
     
     ## ---- Long round config.
     parser.add_argument('--feature_output_long',
                         type = str,
                         help = '''GTF field name for which to summarize 
-                                  expresion of longRNA assigned reads\n''',
+                                  expresion of longRNA assigned reads (default: gene_name)\n''',
                         required = False,
                         default = 'gene_name')
     
     parser.add_argument('--feature_biotype_long',
                         type = str,
                         help = '''GTF field name defining biotype for
-                                  longRNA features\n''',
+                                  longRNA features (default: gene_biotype)\n''',
                         required = False,
                         default = 'gene_biotype')
     
@@ -119,7 +126,8 @@ def main():
     parser.add_argument('--ml_flag_long',
                         type = int,
                         help = '''Multi-loci graph detection based 
-                                  groups flag for long round\n''',
+                                  groups flag for long round.
+                                  Options are 1: enable (default) and 0: disable\n''',
                         required = False,
                         default = 1)
     
@@ -127,35 +135,38 @@ def main():
     parser.add_argument('--feature_small',
                         type = str,
                         help = '''GTF feature type for smallRNA reads 
-                                  to be assigned to\n''',
+                                  to be assigned to (default: transcript)\n''',
                         required = False,
                         default = 'transcript')
     
     parser.add_argument('--feature_output_small',
                         type = str,
                         help = '''GTF field name for which to summarize 
-                                  counts of smallRNA assigned reads\n''',
+                                  counts of smallRNA assigned reads
+                                  (default: transcript_name)\n''',
                         required = False,
                         default = 'transcript_name')
     
     parser.add_argument('--feature_biotype_small',
                         type = str,
                         help = '''GTF field name defining biotype for
-                                  smallRNA features\n''',
+                                  smallRNA features
+                                  (default: transcript_biotype)\n''',
                         required = False,
                         default = 'transcript_biotype')
     
     parser.add_argument('--min_overlap_small',
                         type = str,
                         help = '''Minimal feature-alignment overlapping fraction
-                                  for assignation (default 1) for long round \n''',
+                                  for assignation (default 1) for small round \n''',
                         required = False,
                         default = '1')
 
     parser.add_argument('--ml_flag_small',
                         type = int,
                         help = '''Multi-loci graph detection 
-                                  based groups flag for small round\n''',
+                                  based groups flag for small round.
+                                  Options are 1: enable (default) and 0: disable\n''',
                         required = False,
                         default = 1)
     
@@ -170,9 +181,11 @@ def main():
     
     parser.add_argument('--btyperounds_filename',
                         help = '''Optional .csv file with gene_biotype 
-                                  assignation_round custom defined pairs \n''',
+                                  assignation_round custom defined pairs
+                                  (alternatively, in-built btyperounds will be used)\n''',
                         required = False,
                         default = None)
+
     
     ## Suppress future warnings
     simplefilter(action='ignore', category=FutureWarning)
@@ -186,30 +199,48 @@ def main():
     ## Required arguments
     outdir = args.outdir
     gtf_filename = os.path.abspath(args.gtf)
-    n_cores = args.n_cores
 
     ## Params
     end = ('Paired' if args.paired_flag else 'Single')
+    mtxF = args.mtx
     strand = args.strand_option
     th_high = args.th_high
     th_low = args.th_low
     seed = args.seed
-    
+    n_cores = args.n_cores
+
     ## Additional optinal arguments
     fcpath = args.featureCounts_path
     btyperounds_filename = args.btyperounds_filename
 
-    ## Get input files
-    infiles = [os.path.abspath(line.rstrip()) for line in open(args.bam_infiles)]
-    if '' in infiles: infiles.remove('')
     
-    ## Select default crounds file if non-user-input defined
-    if btyperounds_filename == None:
-        ##btype_crounds = config.get_btypes_by_crounds() for major compatibility
-        ##btype_crounds = pd.read_csv(utils.resource_path('btypes_crounds.csv')) for compiled version
+    ## --------------- Read inputs
+    
+    ## Get input files
+    infiles = pd.Series([os.path.abspath(line.rstrip()) for line in open(args.bam_infiles)])
+    if '' in infiles: infiles.remove('')
+
+    ## Get annotations file
+    gtf = read_gtf(gtf_filename)
+    
+    ## If not parse as argument, define sample_names as filenames, with full-paths if duplicates 
+    infiles.index = [re.sub('/','_',re.sub('.bam','',infile)) for infile in infiles]
+
+    tvar = [re.sub('.bam','', utils.path_leaf(infile)) for infile in infiles]
+    if len(tvar) == len(set(tvar)):
+        infiles.index = tvar
+    del tvar
+    
+    if args.sample_names is not None:
+        infiles.index = [os.path.abspath(line.rstrip()) for line in open(args.sample_names)]
+
+    ## Select default crounds file if non parsed as argument
+    ##btype_crounds = config.get_btypes_by_crounds() for major compatibility
+    ##btype_crounds = pd.read_csv(utils.resource_path('btypes_crounds.csv')) for compiled version
+    if btyperounds_filename is None:
         btype_crounds = pd.read_csv(os.path.dirname(__file__) + '/data/btypes_crounds.csv')
     else: btype_crounds = pd.read_csv(btyperounds_filename)
-    
+
     ## Counting rounds configuration
     crounds = pd.DataFrame({
         'r':['small',
@@ -244,17 +275,14 @@ def main():
                  '-exon',
                  '-intron']})
     
-    ## Get gene biotypes
-    gtf = read_gtf(gtf_filename)
-
     ## Create directory for temporary files
     if not os.path.exists(outdir): os.mkdir(outdir)
     tmpdir = TemporaryDirectory(prefix = os.path.join(outdir, '.mg_'))
     tmppath = os.path.abspath(tmpdir.name)
     
     ## keep all tmp files
-    ##tmppath = os.path.join(outdir,'tmp')
-    ##if not os.path.exists(tmppath): os.mkdir(tmppath)
+    ## tmppath = os.path.join(outdir,'tmp')
+    ## if not os.path.exists(tmppath): os.mkdir(tmppath)
     
     try: 
         ## RUN COUNTING PIPELINE
@@ -266,28 +294,29 @@ def main():
         
         ## ----- Multi-loci group extraction
         ml = mg.MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
-                   th_low, th_high, seed) 
+                   th_low, th_high, seed)
         
         ## ----- Expression. level summarization
-        counts = count.extract_count_matrix(infiles, tmppath, crounds, n_cores, ml)
-        
+        counts, features = count.extract_count_matrix(infiles, tmppath, crounds,
+                                                      n_cores, ml, mtxF)
         ## ---------------------------------------------------------------------------
+
         
-        ##--------------- Save count matrix
-        ## Save only nonempty features
-        ## Will label samples by using filename fragment that is distinct in all samples
-        nonempty_idx = np.where(counts.sum(axis=1)!= 0)[0].tolist()
-        if len(args.sample_id) > 0:
-            sid = np.array(pd.read_csv(args.sample_id, header = None)[0])
-            counts.columns = sid
+        ## --------------- Write outputs
+                
+        ## Save count matrix
+        if mtxF:
+             mmwrite(os.path.join(outdir,'count_matrix.mtx'), counts)
+        else:
+            counts.columns = infiles.index
+            counts.to_csv(os.path.join(outdir,'count_matrix.csv'), header=True, index=True)
+
+        ## Save sample metadata table
+        infiles.to_csv(os.path.join(outdir,'sample_metadata.csv'), index=True)
             
-        counts.iloc[nonempty_idx].to_csv(
-            os.path.join(outdir,'count_matrix.csv'), header = True, index = True)
-        
         ## Save feature metadata table
-        feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles[0], ml)
-        feats_metadata.reindex(counts.iloc[nonempty_idx].index).to_csv(
-            os.path.join(outdir,'feature_metadata.csv'))
+        feats_metadata = count.extract_feat_metadata(tmppath, gtf, crounds, infiles.index[0], ml)
+        feats_metadata.reindex(features).to_csv(os.path.join(outdir,'feature_metadata.csv'))
         
     finally:
         if os.path.exists(tmppath):

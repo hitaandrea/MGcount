@@ -25,7 +25,7 @@ setup(
     packages=["mgcount"],
     include_package_data=True,
     package_data={"mgcount": ["data/*.csv"]},
-    install_requires=["pandas", "numpy", "scipy", "python-igraph", "pysam", "gtfparse"],
+    install_requires=["pandas", "numpy", "scipy", "python-igraph", "pysam", "gtfparse==1.2.1"],
     entry_points={"console_scripts": ["mgcount=mgcount.__main__:main"]},
 )
 
