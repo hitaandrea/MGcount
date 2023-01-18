@@ -173,7 +173,7 @@ def extract_adjacency_matrix(fc_infile, feat_list):
     
     print('--> Multi-mappers adjacency matrix successfully extracted from ' +
           str(nreads) + ' reads and ' +
-          str(i-1) + ' alignments!')
+          str(i-1) + ' alignments')
     M_sparse = scipy.sparse.csc_matrix(M)
     M_sparse.dtype = np.int32
     return M_sparse

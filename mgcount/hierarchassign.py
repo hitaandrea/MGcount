@@ -58,7 +58,7 @@ def assign_rna_reads_hierarchically(infile, fcpath, tmppath, crounds, end, stran
     bf, sn = infile
     bam_infile = os.path.join(tmppath, sn + '.bam')
     rids_file = os.path.join(tmppath, sn + '_fids.txt')
-    print('--> Hierarchical assignations for ' + sn)
+    ## print('--> Hierarchical assignations for ' + sn)
 
     ## Copy alignment file
     copyfile(bf, bam_infile)
@@ -72,7 +72,7 @@ def assign_rna_reads_hierarchically(infile, fcpath, tmppath, crounds, end, stran
 
         fc_infile = os.path.join(tmppath, bam_infile.rsplit('/')[-1] + '.featureCounts')
         fc_outfile = os.path.join(tmppath, sn + '_fc_' + r)
-        ## print(r + ' assignation round for: ' + sn)
+        print('--> ' + r + ' assignation round for: ' + sn)
         
         ## Call feature counts
         call_featurecounts(bam_infile, sn, fcpath, tmppath, end, strand, crounds.iloc[i])
