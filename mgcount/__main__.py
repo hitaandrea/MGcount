@@ -23,7 +23,7 @@ from mgcount import utils
 def main():
 
     parser = argparse.ArgumentParser(
-        description = """MGcount RNA-seq quantification pipeline v1.0.2 \n""")
+        description = """MGcount RNA-seq quantification pipeline v1.1.0 \n""")
         
     ##--------------- Required I/O
     parser_required = parser.add_argument_group('required arguments')
