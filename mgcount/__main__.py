@@ -13,8 +13,6 @@ from warnings import simplefilter
 from tempfile import TemporaryDirectory
 from gtfparse import read_gtf
 from shutil import rmtree
-from scipy import sparse
-from scipy.io import mmwrite
 
 ## -- MGcount source code
 from mgcount import hierarchassign as hra
@@ -25,7 +23,7 @@ from mgcount import utils
 def main():
 
     parser = argparse.ArgumentParser(
-        description = """MGcount RNA-seq quantification pipeline v1.0.2 \n""")
+        description = """MGcount RNA-seq quantification pipeline v1.1.0 \n""")
         
     ##--------------- Required I/O
     parser_required = parser.add_argument_group('required arguments')
@@ -194,7 +192,6 @@ def main():
 
     ## Set method to start parallel child processes to "spawn"
     mp.set_start_method("spawn")
-
     
     ##--------------- Parse arguments
     args = parser.parse_args()

@@ -6,9 +6,9 @@ import re
 import sys
 import pandas as pd
 import numpy as np
+import subprocess
 import multiprocessing as mp
-import pysam 
-
+import pysam
 from shutil import copyfile
 from functools import partial
 
@@ -21,6 +21,16 @@ def read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
     print("--------------------------------------------------------")
     print("Assigning alignments to features (1/3)")
     print("--------------------------------------------------------")
+
+    ## Check featureCounts
+    fcversion_file = os.path.join(tmppath, '_fcversion.txt')
+    fc_out = os.system(fcpath + ' -v 2>"' + fcversion_file+'"')
+    if not fc_out == 0:
+        sys.exit('featureCounts not found. Please, check the program is available on the path specified by '
+                 '--featureCounts_path argument (default: /user/bin/featureCounts)\n')
+    else:
+        with open(fcversion_file) as f: fcversion = int(''.join(re.findall(r'\d+', f.read())))
+        os.remove(fcversion_file)
     
     ## Split annotation files by cround
     for i in crounds['annot'].unique():
@@ -40,6 +50,7 @@ def read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
     n_cores = min(mp.cpu_count(), n_cores)
     func_arh = partial(assign_rna_reads_hierarchically,
                        fcpath = fcpath,
+                       fcversion = fcversion,
                        tmppath = tmppath,
                        crounds = crounds,
                        end = end,
@@ -53,7 +64,7 @@ def read_assignation_loop(infiles, fcpath, tmppath, gtf_filename,
 
 
 
-def assign_rna_reads_hierarchically(infile, fcpath, tmppath, crounds, end, strand):
+def assign_rna_reads_hierarchically(infile, fcpath, fcversion, tmppath, crounds, end, strand):
 
     bf, sn = infile
     bam_infile = os.path.join(tmppath, sn + '.bam')
@@ -75,7 +86,7 @@ def assign_rna_reads_hierarchically(infile, fcpath, tmppath, crounds, end, stran
         print('--> ' + r + ' assignation round for: ' + sn)
         
         ## Call feature counts
-        call_featurecounts(bam_infile, sn, fcpath, tmppath, end, strand, crounds.iloc[i])
+        call_featurecounts(bam_infile, sn, fcpath, fcversion, tmppath, end, strand, crounds.iloc[i])
         if not os.path.isfile(fc_infile):
             sys.exit('READ ASSIGNATION FAILED for' + sn + '. Please check that:\n'
                      '1. The gtf contains the required non-empty fields as defined by the '
@@ -98,7 +109,7 @@ def assign_rna_reads_hierarchically(infile, fcpath, tmppath, crounds, end, stran
     return 0
 
 
-def call_featurecounts(bam_infile, sn, fcpath, tmppath, end, strand, cround):
+def call_featurecounts(bam_infile, sn, fcpath, fcversion, tmppath, end, strand, cround):
 
     ## Change temporarily the path 
     cwd = os.getcwd()
@@ -154,7 +165,8 @@ def call_featurecounts(bam_infile, sn, fcpath, tmppath, end, strand, cround):
               ## '-G '
                
               ## ---- parameters specific to paired end reads
-              (' -p ' if end == 'Paired' else '') +
+              (' -p' if end == 'Paired' else '') +
+              (' --countReadPairs' if fcversion >= 202 else '') +
               ## '-B '
               ## '-P '
               ## '-d '

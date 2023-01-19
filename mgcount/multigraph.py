@@ -170,7 +170,7 @@ def extract_adjacency_matrix(fc_infile, feat_list):
             else:
                 'Null counts for' + vname
         i+=1
-    
+        
     print('--> Multi-mappers adjacency matrix successfully extracted from ' +
           str(nreads) + ' reads and ' +
           str(i-1) + ' alignments')

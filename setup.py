@@ -9,7 +9,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="mgcount",
-    version="1.0.2",
+    version="1.1.0",
     description="RNA-seq counting tool",
     long_description=README,
     long_description_content_type="text/markdown",
