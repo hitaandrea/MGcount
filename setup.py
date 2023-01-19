@@ -9,7 +9,7 @@ README = (HERE / "README.md").read_text()
 
 setup(
     name="mgcount",
-    version="1.0.2",
+    version="1.1.0",
     description="RNA-seq counting tool",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -25,7 +25,7 @@ setup(
     packages=["mgcount"],
     include_package_data=True,
     package_data={"mgcount": ["data/*.csv"]},
-    install_requires=["pandas", "numpy", "scipy", "python-igraph", "pysam", "gtfparse"],
+    install_requires=["pandas", "numpy", "scipy", "python-igraph", "pysam", "gtfparse==1.2.1"],
     entry_points={"console_scripts": ["mgcount=mgcount.__main__:main"]},
 )
 

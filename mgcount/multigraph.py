@@ -18,7 +18,7 @@ from functools import partial
 ## MGcount source code
 from mgcount import utils
 
-def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores, 
+def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
        th_low, th_high, seed): 
 
     print("--------------------------------------------------------")
@@ -26,8 +26,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
     print("--------------------------------------------------------")
     
     out_ml = dict()
-    samples = [re.sub('.bam','', utils.path_leaf(infile)) for infile in infiles]
-
+    
     ## Setup multicore processing
     n_cores = min(mp.cpu_count(), n_cores)
     for i in np.where(crounds['ml']==True)[0]:
@@ -42,19 +41,19 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
             feat_btypes.drop(['biotype'], axis='columns', inplace=True)
         
         ## Get sample file_names
-        fc_infiles = [os.path.join(tmppath, sn + '_fc_' + cround['r']) for sn in samples]
+        fc_infiles = [os.path.join(tmppath, sn + '_fc_' + cround['r']) for sn in infiles.index]
 
         ## Get non-empty features (reduces mg matrix size and speeds-up computation)
         counts = np.zeros(pd.read_table(
-            os.path.join(tmppath, samples[0]+'_counts_'+ cround['r']+'.csv'), 
+            os.path.join(tmppath, infiles.index[0]+'_counts_'+ cround['r']+'.csv'), 
             sep = '\t', skiprows = 1, usecols = [6]).shape[0])
-        for sn in samples:
+        for sn in infiles.index:
             counts = counts + pd.read_table(
                 os.path.join(tmppath, sn+'_counts_'+ cround['r']+'.csv'), 
                 sep = '\t', skiprows = 1, usecols = [6]).iloc[:,0].to_numpy() 
         
         feats = pd.read_table(
-            os.path.join(tmppath, samples[0]+'_counts_'+cround['r']+'.csv'),
+            os.path.join(tmppath, infiles.index[0]+'_counts_'+cround['r']+'.csv'),
             sep = '\t', skiprows = 1, usecols = [0]).iloc[
                 np.where(counts!= 0)[0].tolist(),0].reset_index(drop = True)    
                                        
@@ -118,7 +117,7 @@ def MG(infiles, outdir, tmppath, gtf, crounds, btype_crounds, n_cores,
                                else df[cround['attr']].iloc[i]
                                for i in range(df.shape[0])]
             ml = ml.append(df)
-            print('   --> ' + btype1 + ' multi-loci groups successfully extracted.')
+            print('--> ' + btype1 + ' multi-loci communities detected.')
 
         ## Store multi-loci groups list
         ml = ml.set_index(cround['attr'])
@@ -171,10 +170,10 @@ def extract_adjacency_matrix(fc_infile, feat_list):
             else:
                 'Null counts for' + vname
         i+=1
-    
-    print('   --> Multi-mappers adjacency matrix successfully extracted from ' +
+        
+    print('--> Multi-mappers adjacency matrix successfully extracted from ' +
           str(nreads) + ' reads and ' +
-          str(i-1) + ' alignments!')
+          str(i-1) + ' alignments')
     M_sparse = scipy.sparse.csc_matrix(M)
     M_sparse.dtype = np.int32
     return M_sparse
